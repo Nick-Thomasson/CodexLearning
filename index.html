@@ -29,6 +29,10 @@
       color: #000;
     }
 
+    .hidden {
+      display: none;
+    }
+
     .app {
       min-height: 100vh;
       display: flex;
@@ -83,6 +87,76 @@
       font-size: 0.9rem;
       font-weight: 600;
     }
+
+    .calculator {
+      width: min(420px, 90vw);
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .calc-display {
+      background: #111;
+      color: #0ff66d;
+      font-family: "Courier New", monospace;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: right;
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+      min-height: 3.2rem;
+    }
+
+    .calc-message {
+      min-height: 1.4rem;
+      font-size: 0.95rem;
+      color: var(--red);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+
+    .calc-button {
+      border: none;
+      border-radius: 10px;
+      padding: 0.9rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      background: #f5f5f5;
+      color: #111;
+      transition: transform 0.05s ease, box-shadow 0.15s ease;
+    }
+
+    .calc-button.operator {
+      background: #111;
+      color: #fff;
+    }
+
+    .calc-button.equal {
+      background: var(--blue);
+      color: #fff;
+      grid-column: span 2;
+    }
+
+    .calc-button.clear {
+      background: #ffe4e4;
+      color: #b00020;
+    }
+
+    .calc-button:active {
+      transform: translateY(1px);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
   </style>
 </head>
 
@@ -128,11 +202,135 @@
         background: "var(--blue)",
       },
       "testing-codex-extension": {
-        text: "teesting",
+        text: "Calculator",
         background: "var(--green)",
       },
 
     };
+
+    const calculator = document.createElement("div");
+    calculator.className = "calculator hidden";
+    calculator.innerHTML = `
+      <div class="calc-display" id="calc-display">0</div>
+      <div class="calc-message" id="calc-message"></div>
+      <div class="calc-grid" id="calc-grid">
+        <button class="calc-button clear" data-clear>AC</button>
+        <button class="calc-button operator" data-operator="/">/</button>
+        <button class="calc-button operator" data-operator="*">*</button>
+        <button class="calc-button operator" data-operator="-">-</button>
+
+        <button class="calc-button" data-number="7">7</button>
+        <button class="calc-button" data-number="8">8</button>
+        <button class="calc-button" data-number="9">9</button>
+        <button class="calc-button operator" data-operator="+">+</button>
+
+        <button class="calc-button" data-number="4">4</button>
+        <button class="calc-button" data-number="5">5</button>
+        <button class="calc-button" data-number="6">6</button>
+        <button class="calc-button equal" data-equals>=</button>
+
+        <button class="calc-button" data-number="1">1</button>
+        <button class="calc-button" data-number="2">2</button>
+        <button class="calc-button" data-number="3">3</button>
+        <button class="calc-button" data-number="0">0</button>
+      </div>
+    `;
+    `;
+    content.appendChild(calculator);
+
+    const calcDisplay = calculator.querySelector("#calc-display");
+    const calcMessage = calculator.querySelector("#calc-message");
+    const calcGrid = calculator.querySelector("#calc-grid");
+
+    let firstOperand = null;
+    let waitingForSecondOperand = false;
+    let operator = null;
+    let displayValue = "0";
+
+    function updateDisplay() {
+      calcDisplay.textContent = displayValue;
+    }
+
+    function setMessage(msg) {
+      calcMessage.textContent = msg;
+    }
+
+    function resetCalculator() {
+      displayValue = "0";
+      firstOperand = null;
+      waitingForSecondOperand = false;
+      operator = null;
+      setMessage("");
+      updateDisplay();
+    }
+
+    function handleDigit(digit) {
+      setMessage("");
+      if (waitingForSecondOperand) {
+        displayValue = digit;
+        waitingForSecondOperand = false;
+      } else {
+        displayValue = displayValue === "0" ? digit : displayValue + digit;
+      }
+      updateDisplay();
+    }
+
+    function handleOperator(nextOperator) {
+      if (nextOperator !== "+") {
+        setMessage("You can only do addition!");
+        return;
+      }
+
+      const inputValue = parseFloat(displayValue);
+
+      if (firstOperand === null) {
+        firstOperand = inputValue;
+      } else if (operator === "+") {
+        firstOperand += inputValue;
+        displayValue = String(firstOperand);
+        updateDisplay();
+      }
+
+      operator = nextOperator;
+      waitingForSecondOperand = true;
+    }
+
+    function handleEquals() {
+      if (operator !== "+") return;
+      const inputValue = parseFloat(displayValue);
+      if (firstOperand === null) return;
+      firstOperand += inputValue;
+      displayValue = String(firstOperand);
+      operator = null;
+      waitingForSecondOperand = false;
+      updateDisplay();
+    }
+
+    calcGrid.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLButtonElement)) return;
+
+      if (target.hasAttribute("data-number")) {
+        handleDigit(target.dataset.number);
+        return;
+      }
+
+      if (target.hasAttribute("data-operator")) {
+        handleOperator(target.dataset.operator);
+        return;
+      }
+
+      if (target.hasAttribute("data-equals")) {
+        handleEquals();
+        return;
+      }
+
+      if (target.hasAttribute("data-clear")) {
+        resetCalculator();
+      }
+    });
+
+    updateDisplay();
 
     const backButton = document.createElement("button");
     backButton.type = "button";
@@ -151,6 +349,15 @@
       tabs.forEach((tab) => {
         tab.classList.toggle("active", tab.dataset.target === viewKey);
       });
+
+      if (viewKey === "testing-codex-extension") {
+        contentText.classList.add("hidden");
+        calculator.classList.remove("hidden");
+        resetCalculator();
+      } else {
+        contentText.classList.remove("hidden");
+        calculator.classList.add("hidden");
+      }
 
       if (viewKey === "home") {
         if (content.contains(backButton)) {
